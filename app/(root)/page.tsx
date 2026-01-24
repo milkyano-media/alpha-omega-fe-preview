@@ -3,17 +3,15 @@
 // import { FAQSection } from "@/components/faq";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
-import { useAuth } from "@/lib/auth-context";
 import { ServicesGrid } from "@/components/services-grid";
 // import { HorizontalCarousel } from "@/components/ui/horizontal-carousel";
 import { TestimonialCarousel } from "@/components/testimonial-carousel";
 import Image from "next/image";
 import { ServicesCarousel } from "@/components/services-carousel";
+import { GalleryShowcase } from "@/components/gallery-showcase";
 
 export default function Home() {
   const router = useRouter();
-  const { isAuthenticated } = useAuth();
-
   // Testimonial images data
   const testimonialImages = [
     { id: 1, src: "/assets/main-client-1.png", alt: "Client Feedback 1" },
@@ -23,16 +21,16 @@ export default function Home() {
   ];
 
   const handleBookNow = () => {
-    if (isAuthenticated) {
-      router.push("/book/services");
-    } else {
-      router.push("/login?returnUrl=/book/services");
-    }
+    router.push("/book");
   };
 
   return (
     <main className="flex flex-col gap-20">
-      <section className="bg-black md:bg-[url('/bg/main-hero.png')] bg-[url('/bg/main-hero-mobile-1.jpeg')] bg-cover bg-center h-screen flex flex-col justify-center items-center text-center text-white pt-10 relative gap-5">
+
+      {/* HERO + GALLERY WRAPPER (no gap between them) */}
+      <div className="flex flex-col">
+        {/* HERO SECTION */}
+        <section className="bg-black md:bg-[url('/bg/main-hero.png')] bg-[url('/bg/main-hero-mobile-1.jpeg')] bg-cover bg-center h-screen flex flex-col justify-center items-center text-center text-white pt-10 pb-27 relative gap-5">
         <div className="absolute inset-0 bg-black/50 md:hidden"></div>
         <div className="w-full md:w-max flex justify-center relative z-10">
           <Image
@@ -130,6 +128,10 @@ export default function Home() {
           </a> */}
         </div>
       </section>
+
+        {/* GALLERY SHOWCASE SECTION */}
+        <GalleryShowcase onBookNow={handleBookNow} />
+      </div>
 
       <section className="flex flex-col gap-8 justify-center items-center px-4 container mx-auto">
         <div className="w-full md:w-max flex justify-center items-center">
@@ -586,15 +588,9 @@ export default function Home() {
         <FAQSection />
       </section> */}
 
-        {/* GALLERY SECTION */}
-      <section className="flex flex-col items-center gap-8 px-4 mb-40 container mx-auto">
+      {/* JOIN OUR GALLERY SECTION */}
+      <section className="flex flex-col items-center gap-8 px-4 mb-40 container mx-auto py-16">
         <h3 className="text-center">Join Our Gallery Of Successful Cuts.</h3>
-
-        {/* <p>
-          Experience the real barbershop experience. Ultimate grooming with
-          luxury service designed for you. Our team of expert barbers doesn’t
-          disappoint!
-        </p> */}
 
         <Button
           variant={"secondary"}

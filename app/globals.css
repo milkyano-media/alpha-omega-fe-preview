@@ -49,6 +49,13 @@
 }
 
 :root {
+  /* Neon green theme colors (Oakleigh style) */
+  --neon-green: #1CFF21;
+  --neon-green-dark: #036901;
+  --neon-green-hover: #33FF00;
+  --neon-background: #010401;
+  --neon-card-bg: #063307;
+
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
   --card: oklch(1 0 0);

@@ -154,14 +154,27 @@ export interface SquareBookingResponse {
   isRetry?: boolean;
 }
 
+// Backend API URL - calls Express API which then calls Square
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api';
+
 export const BookingService = {
   /**
-   * Get all team members (barbers)
+   * Get all team members (barbers) - calls backend API
+   * Backend fetches from Square API (Frontend -> Backend -> Square)
    */
   async getTeamMembers(): Promise<TeamMember[]> {
     try {
-      const response = await API.get('/team-members');
-      return response.data || [];
+      const response = await fetch(`${API_BASE_URL}/public/team-members`, {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' },
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: Failed to fetch barbers`);
+      }
+
+      const data = await response.json();
+      return data.data || [];
     } catch (error: any) {
       throw new Error(error.message || "Failed to fetch barbers");
     }
@@ -169,23 +182,37 @@ export const BookingService = {
 
   /**
    * Get services for a specific team member
+   * Filters from all services based on team member
    */
   async getTeamMemberServices(teamMemberId: number): Promise<Service[]> {
     try {
-      const response = await API.get(`/services/team-member/${teamMemberId}`);
-      return response.data || [];
+      const allServices = await this.getAllServices();
+      // Filter services that have this team member
+      return allServices.filter(service =>
+        service.teamMembers?.some(tm => tm.id === teamMemberId)
+      );
     } catch (error: any) {
       throw new Error(error.message || `Failed to fetch services for barber ${teamMemberId}`);
     }
   },
 
   /**
-   * Get all services (for reversed flow)
+   * Get all services - calls backend API
+   * Backend fetches from Square API (Frontend -> Backend -> Square)
    */
   async getAllServices(): Promise<Service[]> {
     try {
-      const response = await API.get('/services');
-      return response.data || [];
+      const response = await fetch(`${API_BASE_URL}/public/services`, {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' },
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: Failed to fetch services`);
+      }
+
+      const data = await response.json();
+      return data.data || [];
     } catch (error: any) {
       throw new Error(error.message || "Failed to fetch services");
     }
@@ -196,15 +223,101 @@ export const BookingService = {
    */
   async getBarbersForService(serviceId: number): Promise<TeamMember[]> {
     try {
-      const response = await API.get(`/services/${serviceId}/barbers`);
-      return response.data || [];
+      const response = await fetch(`${API_BASE_URL}/public/services`, {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' },
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: Failed to fetch services`);
+      }
+
+      const data = await response.json();
+      const services = data.data || [];
+
+      // Find the service and return its team members
+      const service = services.find((s: Service) => s.id === serviceId);
+      return service?.teamMembers || [];
     } catch (error: any) {
       throw new Error(error.message || `Failed to fetch barbers for service ${serviceId}`);
     }
   },
 
   /**
-   * Create booking directly with Square API
+   * Create or get customer via backend API (Frontend -> Backend -> Square)
+   * NO AUTH REQUIRED for guest booking
+   */
+  async createCustomerViaBackend(customerData: {
+    email: string;
+    firstName: string;
+    lastName: string;
+    phoneNumber: string;
+    idempotencyKey?: string;
+  }): Promise<{ customer: { id: string }; isNew: boolean }> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/public/customers`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(customerData),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to create customer');
+      }
+
+      return data.data;
+    } catch (error: any) {
+      console.error('Error creating customer via backend:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Create booking via backend API (Frontend -> Backend -> Square)
+   * NO AUTH REQUIRED for guest booking
+   */
+  async createBookingViaBackend(bookingData: {
+    customerId: string;
+    serviceVariationId: string;
+    teamMemberId: string;
+    startAt: string;
+    customerNote?: string;
+    idempotencyKey: string;
+    serviceVariationVersion?: string;
+    durationMinutes?: number;
+  }): Promise<SquareBookingResponse> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/public/bookings`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(bookingData),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to create booking');
+      }
+
+      return {
+        success: true,
+        booking: data.data?.booking,
+        message: data.message,
+      };
+    } catch (error: any) {
+      console.error('Error creating booking via backend:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Create booking directly with Square API (legacy - still works)
    * This is more reliable than going through our backend first
    */
   async createSquareBooking(bookingData: SquareBookingRequest): Promise<SquareBookingResponse> {
@@ -218,11 +331,11 @@ export const BookingService = {
       });
 
       const data = await response.json();
-      
+
       if (!response.ok || !data.success) {
         throw new Error(data.message || 'Failed to create Square booking');
       }
-      
+
       return data;
     } catch (error: any) {
       console.error('Error creating Square booking:', error);
@@ -326,36 +439,32 @@ export const BookingService = {
 
   /**
    * Search for available time slots for a service
+   * Calls backend API which fetches from Square (Frontend -> Backend -> Square)
+   * NO AUTH REQUIRED for public booking flow
    */
   async searchAvailability(
     serviceVariationId: string,
     startDate: Date,
-    endDate: Date
+    endDate: Date,
+    teamMemberId?: string
   ): Promise<AvailabilityResponse> {
-    // Check both localStorage and sessionStorage for token
-    const token = localStorage.getItem("token") || sessionStorage.getItem("token");
-    
-    if (!token) {
-      throw new Error("Authentication required. Please log in again.");
-    }
-
-    console.log("Making availability request:", {
+    console.log("Making availability request to backend:", {
       serviceVariationId,
       startDate: startDate.toISOString(),
       endDate: endDate.toISOString(),
-      hasToken: !!token
+      teamMemberId,
     });
 
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api"}/services/availability/search`, {
+    const response = await fetch(`${API_BASE_URL}/public/availability/search`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify({
         service_variation_id: serviceVariationId,
         start_at: startDate.toISOString(),
         end_at: endDate.toISOString(),
+        team_member_id: teamMemberId,
       }),
     });
 
@@ -364,12 +473,10 @@ export const BookingService = {
       try {
         const errorData = await response.json();
         console.error("Availability API error details:", errorData);
-        
-        // Handle different error response formats
+
         if (errorData.message) {
           errorMessage = errorData.message;
         } else if (errorData.error) {
-          // If error is an object, stringify it properly
           if (typeof errorData.error === 'object') {
             errorMessage = JSON.stringify(errorData.error);
           } else {

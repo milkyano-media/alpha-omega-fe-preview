@@ -64,7 +64,10 @@ export function GalleryCarousel({ className }: GalleryCarouselProps) {
   return (
     <div className={`relative w-full max-w-[500px] ${className}`}>
       {/* Main carousel container */}
-      <div className="relative aspect-square overflow-hidden rounded-4xl shadow-lg bg-gray-200">
+      <div
+        className="relative aspect-square overflow-hidden rounded-4xl shadow-lg bg-gray-200"
+        style={{ touchAction: 'pan-x pinch-zoom' }}
+      >
         <div 
           className="flex transition-transform duration-500 ease-in-out h-full"
           style={{ transform: `translateX(-${currentIndex * 100}%)` }}

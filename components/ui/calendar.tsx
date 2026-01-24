@@ -50,7 +50,7 @@ export function BookingCalendar({
       onMonthChange(newMonth.toDate());
     }
   };
-  
+
   const nextMonth = () => {
     const newMonth = currentMonth.add(1, "month");
     setCurrentMonth(newMonth);
@@ -81,13 +81,19 @@ export function BookingCalendar({
   const isDateAvailable = (day: number) => {
     // If no available dates provided, all future dates are considered available
     if (!availableDates || availableDates.length === 0) return true;
-    
+
     // Create a date string in YYYY-MM-DD format for comparison
     const date = currentMonth.date(day);
     const dateString = date.format('YYYY-MM-DD');
-    
+
     // Check if this date is in the available dates array
     return availableDates.includes(dateString);
+  };
+
+  // Check if today
+  const isToday = (day: number) => {
+    const date = currentMonth.date(day);
+    return date.isSame(dayjs(), "day");
   };
 
   // Check if a day is the selected date (considering month and year)
@@ -99,32 +105,62 @@ export function BookingCalendar({
     );
   };
 
+  // Get day cell classes - matching white theme
+  const getDayClasses = (dayNumber: number | null) => {
+    if (dayNumber === null) return "";
+
+    const isPast = isPastDate(dayNumber);
+    const isAvailable = isDateAvailable(dayNumber);
+    const isDisabled = isPast || !isAvailable;
+    const isSelected = isSelectedDay(dayNumber);
+    const isTodayDate = isToday(dayNumber);
+
+    // Base classes
+    let classes = "p-2 text-center text-sm transition-colors ";
+
+    if (isSelected) {
+      // Selected state - white background, black text
+      classes += "bg-white text-black border-2 border-gray-400 cursor-pointer ";
+    } else if (isDisabled) {
+      // Disabled state - muted styling
+      classes += "text-gray-500 border-2 border-gray-600 cursor-not-allowed opacity-60 ";
+    } else if (isTodayDate) {
+      // Today - bold border
+      classes += "text-white border-4 border-white font-bold hover:bg-white hover:text-black cursor-pointer ";
+    } else {
+      // Available date - white theme
+      classes += "text-white border-2 border-white/50 hover:bg-white hover:text-black cursor-pointer ";
+    }
+
+    return classes;
+  };
+
   return (
-    <div className="w-full mx-auto p-4 bg-white rounded-lg shadow-sm">
-      <div className="flex justify-between items-center mb-3">
-        <h2 className="text-lg font-bold">
+    <div className="w-full mx-auto p-4 bg-transparent rounded-lg">
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-sm font-medium uppercase text-white">
           {currentMonth.format("MMMM YYYY")}
         </h2>
         <div className="flex gap-1">
           <button
             onClick={prevMonth}
-            className="p-1 border rounded hover:bg-gray-100 transition-colors"
+            className="p-1 border border-white/50 rounded bg-transparent text-white hover:bg-white/10 transition-colors opacity-50 hover:opacity-100"
             aria-label="Previous month"
           >
             <ChevronLeft className="h-4 w-4" />
           </button>
           <button
             onClick={nextMonth}
-            className="p-1 border rounded hover:bg-gray-100 transition-colors"
+            className="p-1 border border-white/50 rounded bg-transparent text-white hover:bg-white/10 transition-colors opacity-50 hover:opacity-100"
             aria-label="Next month"
           >
             <ChevronRight className="h-4 w-4" />
           </button>
         </div>
       </div>
-      <div className="grid grid-cols-7 text-center text-gray-500 text-xs">
+      <div className="grid grid-cols-7 text-center text-gray-400 text-xs mb-2">
         {["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"].map((day) => (
-          <div key={day} className="font-semibold p-1">
+          <div key={day} className="font-normal p-1">
             {day}
           </div>
         ))}
@@ -138,20 +174,11 @@ export function BookingCalendar({
           const isPast = dayNumber !== null && isPastDate(dayNumber);
           const isAvailable = dayNumber !== null && isDateAvailable(dayNumber);
           const isDisabled = isPast || !isAvailable;
-          const isSelected = dayNumber !== null && isSelectedDay(dayNumber);
 
           return (
             <div
               key={index}
-              className={`p-2 text-center text-sm rounded-md ${
-                dayNumber !== null
-                  ? isDisabled
-                    ? isPast 
-                      ? "text-gray-300 cursor-not-allowed" 
-                      : "text-gray-400 bg-gray-100 cursor-not-allowed"
-                    : "hover:bg-gray-200 cursor-pointer"
-                  : ""
-              } ${isSelected ? "bg-black text-white" : ""}`}
+              className={getDayClasses(dayNumber)}
               onClick={() =>
                 dayNumber !== null &&
                 !isDisabled &&

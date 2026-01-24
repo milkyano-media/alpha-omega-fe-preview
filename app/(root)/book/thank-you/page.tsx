@@ -1,292 +1,200 @@
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { useRouter } from 'next/navigation';
-import { useAuth } from '@/lib/auth-context';
-import Link from 'next/link';
-import { VerificationGuard } from '@/components/verification-guard';
+import { useEffect, useState } from "react";
+import { Button } from "@/components/ui/button";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import Image from "next/image";
+import dayjs from "dayjs";
+import timezone from "dayjs/plugin/timezone";
+import utc from "dayjs/plugin/utc";
 
-interface BookingDetails {
-  id: number;
-  service: string;
-  date: string;
-  time: string;
-  deposit: string;
-  total: string;
-  status: string;
-}
+dayjs.extend(utc);
+dayjs.extend(timezone);
 
-interface PaymentReceipt {
-  receiptUrl?: string;
-  paymentId?: string;
-  amount?: string;
-  currency?: string;
-  idempotencyKey?: string;
-  squareBookingId?: string;
+interface CompletedBooking {
+  bookingId?: string;
+  service?: {
+    name: string;
+    price_amount: number;
+  };
+  startAt?: string;
+  customerName?: string;
 }
 
 export default function ThankYou() {
   const router = useRouter();
-  const { isAuthenticated, user } = useAuth();
-  const [bookingDetails, setBookingDetails] = useState<BookingDetails | null>(
-    null
-  );
-  const [paymentReceipt, setPaymentReceipt] = useState<PaymentReceipt | null>(
-    null
-  );
-  const [formattedDate, setFormattedDate] = useState<string>('');
+  const [booking, setBooking] = useState<CompletedBooking | null>(null);
 
   useEffect(() => {
-    // Check if user is authenticated
-    if (!isAuthenticated) {
-      router.push('/login');
-      return;
-    }
-
     // Get the booking details from localStorage
-    const lastBookingStr = localStorage.getItem('lastBooking');
-    if (lastBookingStr) {
+    const completedBookingStr = localStorage.getItem("completedBooking");
+    if (completedBookingStr) {
       try {
-        const lastBooking = JSON.parse(lastBookingStr) as BookingDetails;
-        setBookingDetails(lastBooking);
-
-        // Format the date to be more readable
-        if (lastBooking.date) {
-          try {
-            const date = new Date(lastBooking.date);
-            const options: Intl.DateTimeFormatOptions = {
-              weekday: 'long',
-              year: 'numeric',
-              month: 'long',
-              day: 'numeric'
-            };
-            setFormattedDate(date.toLocaleDateString('en-US', options));
-          } catch (dateErr) {
-            // If date formatting fails, use the original date string
-            setFormattedDate(lastBooking.date);
-            console.error('Error formatting date:', dateErr);
-          }
-        }
+        const completedBooking = JSON.parse(
+          completedBookingStr
+        ) as CompletedBooking;
+        setBooking(completedBooking);
       } catch (err) {
-        console.error('Error parsing booking details:', err);
+        console.error("Error parsing booking details:", err);
       }
     }
 
-    // Get payment receipt details
-    const paymentReceiptStr = localStorage.getItem('paymentReceipt');
-    if (paymentReceiptStr) {
-      try {
-        const receipt = JSON.parse(paymentReceiptStr) as PaymentReceipt;
-        setPaymentReceipt(receipt);
-      } catch (err) {
-        console.error('Error parsing payment receipt:', err);
-      }
-    }
-
-    // Clear the booking details after we've loaded them
-    // to prevent showing old booking details on page refresh
+    // Clear the booking details after loading
     return () => {
-      localStorage.removeItem('lastBooking');
-      localStorage.removeItem('paymentReceipt');
+      localStorage.removeItem("completedBooking");
+      localStorage.removeItem("selectedServices");
+      localStorage.removeItem("selectedService");
+      localStorage.removeItem("selectedBarberId");
     };
-  }, [isAuthenticated, router]);
+  }, []);
+
+  const formatPrice = (amount: number) => `$${(amount / 100).toFixed(2)}`;
 
   return (
-    <VerificationGuard requireVerification={true}>
-      <main className='flex flex-col gap-20 mt-30'>
-      <section className='container mx-auto flex flex-col items-center justify-center text-center py-20 px-4'>
-        <div className='w-full max-w-md bg-white rounded-lg shadow-lg p-8'>
-          <div className='w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6'>
+    <section className="relative bg-[#010401] min-h-screen text-white">
+      {/* Header */}
+      <div className="fixed top-0 left-0 right-0 z-50 bg-black px-6 py-4 flex justify-center md:justify-start border-b border-[#1CFF21] md:border-b-0">
+        <Link href="/">
+          <Image
+            src="/logo/main.png"
+            alt="Alpha Omega"
+            width={192}
+            height={48}
+            className="w-48 md:w-[12rem] h-auto opacity-90"
+          />
+        </Link>
+      </div>
+
+      <main className="flex flex-col items-center justify-center min-h-screen px-4 pt-24 pb-12">
+        <div className="w-full max-w-md bg-[#0a0a0a] rounded-xl border border-[#1CFF21]/30 p-8">
+          {/* Success Icon */}
+          <div className="w-20 h-20 bg-[#036901]/30 rounded-full flex items-center justify-center mx-auto mb-6 border-2 border-[#1CFF21]">
             <svg
-              xmlns='http://www.w3.org/2000/svg'
-              className='h-10 w-10 text-green-600'
-              fill='none'
-              viewBox='0 0 24 24'
-              stroke='currentColor'
+              xmlns="http://www.w3.org/2000/svg"
+              className="h-10 w-10 text-[#1CFF21]"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
             >
               <path
-                strokeLinecap='round'
-                strokeLinejoin='round'
+                strokeLinecap="round"
+                strokeLinejoin="round"
                 strokeWidth={2}
-                d='M5 13l4 4L19 7'
+                d="M5 13l4 4L19 7"
               />
             </svg>
           </div>
 
-          <h1 className='text-3xl font-bold mb-4'>Booking Confirmed!</h1>
+          <h1 className="text-3xl font-bold mb-4 text-center">
+            Booking Confirmed!
+          </h1>
 
-          <p className='text-lg mb-6'>
-            Thank you for choosing Alpha Omega, {user?.first_name}.
-            {bookingDetails?.status === 'payment_received'
-              ? ' Your payment has been processed successfully!'
-              : ' Your appointment has been successfully booked and confirmed!'}
+          <p className="text-lg mb-6 text-center text-gray-300">
+            Thank you for choosing Alpha Omega
+            {booking?.customerName ? `, ${booking.customerName.split(" ")[0]}` : ""}
+            . Your appointment has been booked!
           </p>
 
-          {bookingDetails && (
-            <div className='mb-6 bg-gray-50 p-4 rounded-lg border border-gray-200 text-left'>
-              <h2 className='font-bold text-xl mb-2 text-center'>
+          {booking && (
+            <div className="mb-6 bg-black/50 p-4 rounded-lg border border-[#1CFF21]/20">
+              <h2 className="font-bold text-xl mb-4 text-center text-[#1CFF21]">
                 Booking Details
               </h2>
 
-              {bookingDetails.status === 'payment_received' && (
-                <div className='mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded text-yellow-800 text-sm'>
-                  <p className='font-bold mb-1'>Important Notice:</p>
-                  <p>
-                    Your payment was processed successfully, but we encountered
-                    an issue finalizing your booking. Our team has been notified
-                    and will confirm your appointment shortly.
-                  </p>
-                </div>
-              )}
+              <div className="space-y-3 text-sm">
+                {booking.service && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-400">Service:</span>
+                    <span className="font-medium">{booking.service.name}</span>
+                  </div>
+                )}
 
-              {paymentReceipt && paymentReceipt.receiptUrl && (
-                <div className='mb-4 p-3 bg-blue-50 border border-blue-200 rounded text-blue-800 text-sm'>
-                  <p className='font-bold mb-1'>Payment Receipt:</p>
-                  <p>
-                    Your payment has been processed successfully.{' '}
-                    <Link
-                      href={paymentReceipt.receiptUrl}
-                      target='_blank'
-                      className='text-blue-600 underline font-medium'
-                    >
-                      View Receipt
-                    </Link>
-                  </p>
-                </div>
-              )}
+                {booking.startAt && (
+                  <>
+                    <div className="flex justify-between">
+                      <span className="text-gray-400">Date:</span>
+                      <span className="font-medium">
+                        {dayjs(booking.startAt)
+                          .tz("Australia/Melbourne")
+                          .format("dddd, MMMM D, YYYY")}
+                      </span>
+                    </div>
 
-              <div className='grid grid-cols-2 gap-2 text-sm'>
-                <p className='text-gray-600'>Service:</p>
-                <p className='font-medium'>{bookingDetails.service}</p>
+                    <div className="flex justify-between">
+                      <span className="text-gray-400">Time:</span>
+                      <span className="font-medium">
+                        {dayjs(booking.startAt)
+                          .tz("Australia/Melbourne")
+                          .format("h:mm A")}
+                      </span>
+                    </div>
+                  </>
+                )}
 
-                <p className='text-gray-600'>Date:</p>
-                <p className='font-medium'>
-                  {formattedDate || bookingDetails.date}
-                </p>
+                {booking.service && (
+                  <div className="flex justify-between pt-2 border-t border-[#1CFF21]/20">
+                    <span className="text-gray-400">Amount Due:</span>
+                    <span className="font-medium text-[#1CFF21]">
+                      {formatPrice(booking.service.price_amount)} AUD
+                    </span>
+                  </div>
+                )}
 
-                <p className='text-gray-600'>Time:</p>
-                <p className='font-medium'>{bookingDetails.time}</p>
-
-                <p className='text-gray-600'>Deposit Paid:</p>
-                <p className='font-medium'>${bookingDetails.deposit} AUD</p>
-
-                <p className='text-gray-600'>Total Price:</p>
-                <p className='font-medium'>${bookingDetails.total} AUD</p>
-
-                <p className='text-gray-600'>Balance Due:</p>
-                <p className='font-medium'>
-                  $
-                  {(
-                    parseFloat(bookingDetails.total) -
-                    parseFloat(bookingDetails.deposit)
-                  ).toFixed(2)}{' '}
-                  AUD
-                </p>
-
-                <p className='text-gray-600'>Booking Status:</p>
-                <p
-                  className={`font-medium capitalize ${
-                    bookingDetails.status === 'payment_received'
-                      ? 'text-yellow-600'
-                      : ''
-                  }`}
-                >
-                  {bookingDetails.status === 'payment_received'
-                    ? 'Processing'
-                    : bookingDetails.status}
-                </p>
-              </div>
-
-              <p className='text-xs text-gray-500 mt-2'>
-                (Displayed prices show the full service amount. 50% deposit has
-                been paid.)
-              </p>
-
-              {paymentReceipt && paymentReceipt.paymentId && (
-                <div className='grid grid-cols-2 gap-2 text-sm mt-2'>
-                  <p className='text-gray-600'>Payment ID:</p>
-                  <p className='font-medium text-xs break-all'>
-                    {paymentReceipt.paymentId}
-                  </p>
-                </div>
-              )}
-
-              <div className='mt-4'>
-                <h3 className='font-semibold text-lg mb-2 text-center'>
-                  Our Location
-                </h3>
-                <div style={{ width: '100%' }}>
-                  <iframe
-                    width='100%'
-                    height='300'
-                    frameBorder={0}
-                    scrolling='no'
-                    marginHeight={0}
-                    marginWidth={0}
-                    src='https://maps.google.com/maps?width=100%25&amp;height=600&amp;hl=en&amp;q=104%20Greville%20street,%20Prahran,%20+(Alpha%20Omega%20Mens%20Grooming)&amp;t=&amp;z=13&amp;ie=UTF8&amp;iwloc=B&amp;output=embed'
-                  >
-                    <a href='https://www.gps.ie/collections/personal-trackers/'>
-                      real-time gps tracker,
-                    </a>
-                  </iframe>
-                </div>
-                <p className='text-sm text-center mt-2 font-medium'>
-                  55 Portman St, Oakleigh VIC 3166, Australia
-                </p>
+                {booking.bookingId && (
+                  <div className="flex justify-between text-xs">
+                    <span className="text-gray-500">Booking ID:</span>
+                    <span className="text-gray-500 font-mono">
+                      {booking.bookingId.substring(0, 12)}...
+                    </span>
+                  </div>
+                )}
               </div>
             </div>
           )}
 
-          <p className='mb-8 text-gray-600'>
-            {bookingDetails?.status === 'payment_received' ? (
-              <>
-                Your payment has been received and our team is processing your
-                booking. You will receive a confirmation email soon.
-                <br />
-                <br />
-                <strong>Please note:</strong> If you don&apos;t receive a
-                confirmation within 24 hours, please contact us.
-              </>
-            ) : (
-              <>
-                You will receive a confirmation email with the details of your
-                appointment. Please arrive 10 minutes before your scheduled
-                time.
-                <br />
-                <br />
-                <strong>Remember:</strong> Please pay the remaining balance at
-                the barbershop.
-              </>
-            )}
+          {/* Location */}
+          <div className="mb-6">
+            <h3 className="font-semibold text-lg mb-3 text-center">
+              Our Location
+            </h3>
+            <div className="rounded-lg overflow-hidden">
+              <iframe
+                width="100%"
+                height="200"
+                frameBorder={0}
+                scrolling="no"
+                src="https://maps.google.com/maps?width=100%25&amp;height=200&amp;hl=en&amp;q=104%20Greville%20street,%20Prahran,%20+(Alpha%20Omega%20Mens%20Grooming)&amp;t=&amp;z=15&amp;ie=UTF8&amp;iwloc=B&amp;output=embed"
+              />
+            </div>
+            <p className="text-sm text-center mt-2 text-gray-400">
+              104 Greville St, Prahran VIC 3181
+            </p>
+          </div>
+
+          <p className="mb-8 text-gray-400 text-sm text-center">
+            You will receive a confirmation email shortly. Please arrive 10
+            minutes before your scheduled time.
           </p>
 
-          <div className='flex flex-col gap-4'>
-            {paymentReceipt && paymentReceipt.receiptUrl && (
-              <Button
-                onClick={() => window.open(paymentReceipt.receiptUrl, '_blank')}
-                variant='secondary'
-                className='w-full'
-              >
-                View Payment Receipt
-              </Button>
-            )}
-
+          <div className="flex flex-col gap-3">
             <Button
-              onClick={() => router.push('/book/services')}
-              variant='outline'
-              className='w-full'
+              onClick={() => router.push("/book")}
+              variant="outline"
+              className="w-full border-[#1CFF21] text-[#1CFF21] hover:bg-[#1CFF21]/10"
             >
               Book Another Appointment
             </Button>
 
-            <Button onClick={() => router.push('/')} className='w-full'>
+            <Button
+              onClick={() => router.push("/")}
+              className="w-full bg-[#036901] hover:bg-[#048801] text-white"
+            >
               Return to Home
             </Button>
           </div>
         </div>
-      </section>
-    </main>
-    </VerificationGuard>
+      </main>
+    </section>
   );
 }

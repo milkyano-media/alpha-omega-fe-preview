@@ -2,12 +2,10 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { isTokenExpired, decodeToken } from '@/lib/token-utils';
 
-// Define routes that require verification
+// Define routes that require verification (old booking flow - kept for backward compatibility)
 const BOOKING_ROUTES = [
   '/book/services',
-  '/book/barbers', 
-  '/book/appointment',
-  '/book/thank-you',
+  '/book/barbers',
 ];
 
 // Define routes that require authentication
@@ -15,6 +13,13 @@ const PROTECTED_ROUTES = [
   '/my-bookings',
   '/admin',
   ...BOOKING_ROUTES,
+];
+
+// New booking flow - NO auth required
+const PUBLIC_BOOKING_ROUTES = [
+  '/book',           // Main booking page (barber selection)
+  '/book/appointment', // Date/time + contact form
+  '/book/thank-you',   // Confirmation
 ];
 
 export function middleware(request: NextRequest) {
@@ -29,6 +34,12 @@ export function middleware(request: NextRequest) {
     pathname === '/signup' ||
     pathname === '/verify'
   ) {
+    return NextResponse.next();
+  }
+
+  // Check if this is a public booking route (new flow - no auth required)
+  const isPublicBookingRoute = PUBLIC_BOOKING_ROUTES.some(route => pathname === route);
+  if (isPublicBookingRoute) {
     return NextResponse.next();
   }
 

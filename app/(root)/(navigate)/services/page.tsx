@@ -3,18 +3,11 @@
 import { Button } from "@/components/ui/button";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useAuth } from "@/lib/auth-context";
-
 export default function ServicesPage() {
   const router = useRouter();
-  const { isAuthenticated } = useAuth();
 
   const handleBookBarber = () => {
-    if (isAuthenticated) {
-      router.push("/book/services");
-    } else {
-      router.push("/login?returnUrl=/book/services");
-    }
+    router.push("/book");
   };
 
   return (
