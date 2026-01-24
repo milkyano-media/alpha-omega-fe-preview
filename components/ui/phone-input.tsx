@@ -5,7 +5,9 @@ import * as RPNInput from "react-phone-number-input";
 import flags from "react-phone-number-input/flags";
 import "react-phone-number-input/style.css";
 
-import { Input, InputProps } from "@/components/ui/input";
+import { Input } from "@/components/ui/input";
+
+type InputProps = React.InputHTMLAttributes<HTMLInputElement>;
 import { cn } from "@/lib/utils";
 
 type PhoneInputProps = Omit<
