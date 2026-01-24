@@ -60,7 +60,7 @@ export function SimpleAppointment() {
 
   // Service data from localStorage
   const [selectedService, setSelectedService] = useState<Service | null>(null);
-  const [barberId, setBarberId] = useState<string | null>(null);
+  // const [barberId, setBarberId] = useState<string | null>(null);
 
   // Calendar states
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
@@ -94,7 +94,7 @@ export function SimpleAppointment() {
   // Load service data from localStorage
   useEffect(() => {
     const servicesData = localStorage.getItem("selectedServices");
-    const barberIdData = localStorage.getItem("selectedBarberId");
+    // const barberIdData = localStorage.getItem("selectedBarberId");
 
     if (!servicesData) {
       router.push("/book");
@@ -104,7 +104,7 @@ export function SimpleAppointment() {
     try {
       const services = JSON.parse(servicesData);
       setSelectedService(services[0] || null);
-      setBarberId(barberIdData);
+      // setBarberId(barberIdData);
     } catch {
       router.push("/book");
     }

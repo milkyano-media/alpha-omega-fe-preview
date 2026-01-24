@@ -45,7 +45,7 @@ function extractPriceRange(services: Service[]): string {
 export function BarberCard({
   barber,
   services,
-  isExpanded,
+  // isExpanded,
   variant = "desktop",
 }: BarberCardProps) {
   const imagePath = getBarberImage(barber.first_name);

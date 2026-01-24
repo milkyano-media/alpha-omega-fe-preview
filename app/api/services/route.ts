@@ -35,16 +35,16 @@ export async function GET() {
               const varData = variation.itemVariationData;
 
               // Get team member IDs for this service from booking profile
-              let teamMemberIds: string[] = [];
-              try {
-                const bookingProfile =
-                  await square.bookingsApi.retrieveTeamMemberBookingProfile(
-                    variation.id || ""
-                  );
-                // This might not work directly, we'll handle team members separately
-              } catch {
-                // Ignore - we'll get team members from availability search
-              }
+              // let teamMemberIds: string[] = [];
+              // try {
+              //   const bookingProfile =
+              //     await square.bookingsApi.retrieveTeamMemberBookingProfile(
+              //       variation.id || ""
+              //     );
+              //   // This might not work directly, we'll handle team members separately
+              // } catch {
+              //   // Ignore - we'll get team members from availability search
+              // }
 
               services.push({
                 id: serviceId++,
@@ -86,29 +86,29 @@ export async function GET() {
       for (const member of teamMembers) {
         if (member.id) {
           try {
-            const profileResponse =
-              await square.bookingsApi.retrieveTeamMemberBookingProfile(
-                member.id
-              );
-            const profile = profileResponse.result.teamMemberBookingProfile;
+            // const profileResponse =
+            //   await square.bookingsApi.retrieveTeamMemberBookingProfile(
+            //     member.id
+            //   );
+            // const profile = profileResponse.result.teamMemberBookingProfile;
 
-            if (profile?.teamMemberServiceIds) {
-              // Add this team member to the services they can perform
-              for (const serviceVarId of profile.teamMemberServiceIds) {
-                const service = services.find(
-                  (s) => s.service_variation_id === serviceVarId
-                );
-                if (service) {
-                  service.teamMembers.push({
-                    id: teamMembers.indexOf(member) + 1,
-                    square_up_id: member.id,
-                    first_name: member.givenName || "",
-                    last_name: member.familyName || "",
-                    status: member.status || "ACTIVE",
-                  });
-                }
-              }
-            }
+            // if (profile?.teamMemberServiceIds) {
+            //   // Add this team member to the services they can perform
+            //   for (const serviceVarId of profile.teamMemberServiceIds) {
+            //     const service = services.find(
+            //       (s) => s.service_variation_id === serviceVarId
+            //     );
+            //     if (service) {
+            //       service.teamMembers.push({
+            //         id: teamMembers.indexOf(member) + 1,
+            //         square_up_id: member.id,
+            //         first_name: member.givenName || "",
+            //         last_name: member.familyName || "",
+            //         status: member.status || "ACTIVE",
+            //       });
+            //     }
+            //   }
+            // }
           } catch (profileError) {
             // Team member might not have a booking profile, skip
             console.log(
