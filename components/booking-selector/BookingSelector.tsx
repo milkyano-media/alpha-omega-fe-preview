@@ -1,16 +1,25 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import {
   BookingService,
   TeamMember,
   Service,
 } from "@/lib/booking-service";
+import { useBookingCart } from "@/lib/booking-cart-context";
 import { BarberCard } from "./BarberCard";
 import { ServiceItem } from "./ServiceItem";
+import { FloatingBookButton } from "./FloatingBookButton";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import Link from "next/link";
 import Image from "next/image";
 
@@ -20,13 +29,25 @@ interface BarberWithServices {
 }
 
 export function BookingSelector() {
-  const router = useRouter();
+  const { addItem, removeItem, isServiceSelected, selectedBarber, clearCart } =
+    useBookingCart();
   const [barberServices, setBarberServices] = useState<BarberWithServices[]>(
     [],
   );
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [expandedBarber, setExpandedBarber] = useState<string | null>(null);
+
+  // Dialog state for barber switch warning
+  const [switchBarberDialog, setSwitchBarberDialog] = useState<{
+    open: boolean;
+    pendingService: Service | null;
+    pendingBarber: TeamMember | null;
+  }>({
+    open: false,
+    pendingService: null,
+    pendingBarber: null,
+  });
 
   useEffect(() => {
     const fetchData = async () => {
@@ -90,22 +111,45 @@ export function BookingSelector() {
     fetchData();
   }, []);
 
-  const handleBookNow = (service: Service, barber: TeamMember) => {
-    // Clear any existing booking data
-    localStorage.removeItem("selectedServices");
-    localStorage.removeItem("selectedService");
-    localStorage.removeItem("selectedBarberId");
-    localStorage.removeItem("selectedTimeSlot");
-    localStorage.removeItem("autoSelectedTime");
+  const handleServiceClick = (service: Service, barber: TeamMember) => {
+    // If service is already selected, remove it (toggle behavior)
+    if (isServiceSelected(service.id)) {
+      removeItem(service.id);
+      return;
+    }
 
-    // Store the selected service and barber (use internal id for consistency with existing barbers page)
-    localStorage.setItem("selectedServices", JSON.stringify([service]));
-    localStorage.setItem("selectedService", JSON.stringify(service)); // For backward compatibility
-    localStorage.setItem("selectedBarberId", barber.id.toString());
-    localStorage.setItem("autoSelectedTime", "false"); // Manual selection, show time picker
+    // Try to add item to cart
+    const success = addItem(service, barber);
 
-    // Navigate to appointment page
-    router.push("/book/appointment");
+    // If failed (different barber), show confirmation dialog
+    if (!success) {
+      setSwitchBarberDialog({
+        open: true,
+        pendingService: service,
+        pendingBarber: barber,
+      });
+    }
+  };
+
+  const handleConfirmSwitchBarber = () => {
+    const { pendingService, pendingBarber } = switchBarberDialog;
+    if (pendingService && pendingBarber) {
+      clearCart();
+      addItem(pendingService, pendingBarber);
+    }
+    setSwitchBarberDialog({
+      open: false,
+      pendingService: null,
+      pendingBarber: null,
+    });
+  };
+
+  const handleCancelSwitchBarber = () => {
+    setSwitchBarberDialog({
+      open: false,
+      pendingService: null,
+      pendingBarber: null,
+    });
   };
 
   const toggleBarberServices = (barberId: string) => {
@@ -220,8 +264,9 @@ export function BookingSelector() {
                           <ServiceItem
                             key={service.id}
                             service={service}
-                            onBook={(s) => handleBookNow(s, item.barber)}
+                            onBook={(s) => handleServiceClick(s, item.barber)}
                             variant="mobile"
+                            isSelected={isServiceSelected(service.id)}
                           />
                         ))}
                       </div>
@@ -233,8 +278,9 @@ export function BookingSelector() {
                             <ServiceItem
                               key={service.id}
                               service={service}
-                              onBook={(s) => handleBookNow(s, item.barber)}
+                              onBook={(s) => handleServiceClick(s, item.barber)}
                               variant="desktop"
+                              isSelected={isServiceSelected(service.id)}
                             />
                           ))}
                         </div>
@@ -258,6 +304,49 @@ export function BookingSelector() {
           </div>
         )}
       </div>
+
+      {/* Floating Book Button */}
+      <FloatingBookButton />
+
+      {/* Switch Barber Confirmation Dialog */}
+      <Dialog
+        open={switchBarberDialog.open}
+        onOpenChange={(open) => {
+          if (!open) handleCancelSwitchBarber();
+        }}
+      >
+        <DialogContent className="bg-zinc-900 border-zinc-700 text-white">
+          <DialogHeader>
+            <DialogTitle>Switch Barber?</DialogTitle>
+            <DialogDescription className="text-zinc-400">
+              You already have services selected from{" "}
+              <span className="text-white font-medium">
+                {selectedBarber?.first_name}
+              </span>
+              . Selecting a service from{" "}
+              <span className="text-white font-medium">
+                {switchBarberDialog.pendingBarber?.first_name}
+              </span>{" "}
+              will clear your current selection.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              variant="outline"
+              onClick={handleCancelSwitchBarber}
+              className="bg-transparent border-zinc-600 text-white hover:bg-zinc-800"
+            >
+              Keep Current
+            </Button>
+            <Button
+              onClick={handleConfirmSwitchBarber}
+              className="bg-white text-black hover:bg-gray-200"
+            >
+              Switch Barber
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </section>
   );
 }

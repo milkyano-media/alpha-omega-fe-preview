@@ -1,5 +1,6 @@
 "use client";
 
+import { Check } from "lucide-react";
 import { Service } from "@/lib/booking-service";
 import { NeonBookButton } from "./NeonBookButton";
 
@@ -7,6 +8,7 @@ interface ServiceItemProps {
   service: Service;
   onBook: (service: Service) => void;
   variant?: "mobile" | "desktop";
+  isSelected?: boolean;
 }
 
 function formatPrice(priceAmount: number): string {
@@ -24,6 +26,7 @@ export function ServiceItem({
   service,
   onBook,
   variant = "desktop",
+  isSelected = false,
 }: ServiceItemProps) {
   if (variant === "mobile") {
     return (
@@ -42,8 +45,9 @@ export function ServiceItem({
         <NeonBookButton
           onClick={() => onBook(service)}
           className="w-full h-10 text-xs !px-2 !py-2"
+          isSelected={isSelected}
         >
-          BOOK NOW
+          {isSelected ? <Check className="w-4 h-4" /> : "BOOK NOW"}
         </NeonBookButton>
       </div>
     );
@@ -66,8 +70,9 @@ export function ServiceItem({
         <NeonBookButton
           onClick={() => onBook(service)}
           className="w-full md:w-52 md:h-14 md:flex-shrink-0 whitespace-nowrap"
+          isSelected={isSelected}
         >
-          BOOK NOW
+          {isSelected ? <Check className="w-6 h-6" /> : "BOOK NOW"}
         </NeonBookButton>
       </div>
     </div>

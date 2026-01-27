@@ -58,8 +58,8 @@ interface TimeOfDay {
 export function SimpleAppointment() {
   const router = useRouter();
 
-  // Service data from localStorage
-  const [selectedService, setSelectedService] = useState<Service | null>(null);
+  // Service data from localStorage - now supports multiple services
+  const [selectedServices, setSelectedServices] = useState<Service[]>([]);
   // const [barberId, setBarberId] = useState<string | null>(null);
 
   // Calendar states
@@ -68,6 +68,14 @@ export function SimpleAppointment() {
   const [availableDates, setAvailableDates] = useState<string[]>([]);
   const [isLoadingAvailability, setIsLoadingAvailability] = useState(true);
   const [allAvailabilities, setAllAvailabilities] = useState<TimeSlot[]>([]);
+
+  // Computed values for multiple services
+  const primaryService = selectedServices[0] || null;
+  const totalPrice = selectedServices.reduce((sum, s) => sum + s.price_amount, 0);
+  const totalDuration = selectedServices.reduce((sum, s) => {
+    const duration = s.duration > 10000 ? Math.round(s.duration / 60000) : s.duration;
+    return sum + duration;
+  }, 0);
 
   // Selected time
   const [selectedTime, setSelectedTime] = useState<TimeSlot | null>(null);
@@ -103,7 +111,11 @@ export function SimpleAppointment() {
 
     try {
       const services = JSON.parse(servicesData);
-      setSelectedService(services[0] || null);
+      if (!Array.isArray(services) || services.length === 0) {
+        router.push("/book");
+        return;
+      }
+      setSelectedServices(services);
       // setBarberId(barberIdData);
     } catch {
       router.push("/book");
@@ -112,7 +124,7 @@ export function SimpleAppointment() {
 
   // Fetch availability via API route (no auth required)
   useEffect(() => {
-    if (!selectedService) return;
+    if (!primaryService) return;
 
     const fetchAvailability = async () => {
       setIsLoadingAvailability(true);
@@ -126,7 +138,7 @@ export function SimpleAppointment() {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            service_variation_id: selectedService.service_variation_id,
+            service_variation_id: primaryService.service_variation_id,
             start_at: today.toISOString(),
             end_at: endDate.toISOString(),
           }),
@@ -168,7 +180,7 @@ export function SimpleAppointment() {
     };
 
     fetchAvailability();
-  }, [selectedService]);
+  }, [primaryService]);
 
   const updateTimesForDate = (date: Date, availabilities: TimeSlot[]) => {
     const dateKey = dayjs(date).tz("Australia/Melbourne").format("YYYY-MM-DD");
@@ -221,7 +233,7 @@ export function SimpleAppointment() {
   };
 
   const handleBooking = async (values: z.infer<typeof formSchema>) => {
-    if (!selectedService || !selectedTime) {
+    if (selectedServices.length === 0 || !selectedTime) {
       setError("Please select a service and time");
       return;
     }
@@ -254,7 +266,21 @@ export function SimpleAppointment() {
         throw new Error("Customer ID not returned");
       }
 
-      // Step 2: Create booking
+      // Step 2: Create booking with all services
+      // Build appointment segments for all selected services
+      const appointmentSegments = selectedServices.map((service, index) => {
+        // Use existing segment data if available, otherwise create new
+        const existingSegment = selectedTime.appointment_segments[0];
+        return {
+          service_variation_id: service.service_variation_id,
+          team_member_id: existingSegment?.team_member_id,
+          duration_minutes: service.duration > 10000
+            ? Math.round(service.duration / 60000)
+            : service.duration,
+          service_variation_version: existingSegment?.service_variation_version,
+        };
+      });
+
       const bookingResponse = await fetch("/api/create-booking", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -262,7 +288,7 @@ export function SimpleAppointment() {
           customerId,
           startAt: selectedTime.start_at,
           locationId: selectedTime.location_id,
-          appointmentSegments: selectedTime.appointment_segments,
+          appointmentSegments: appointmentSegments,
           customerNote: values.appointment_note || "",
         }),
       });
@@ -274,14 +300,17 @@ export function SimpleAppointment() {
 
       const bookingData = await bookingResponse.json();
 
-      // Store booking info for thank you page
+      // Store booking info for thank you page (include all services)
       localStorage.setItem(
         "completedBooking",
         JSON.stringify({
           bookingId: bookingData.booking?.id,
-          service: selectedService,
+          services: selectedServices,
+          service: primaryService, // backward compat
           startAt: selectedTime.start_at,
           customerName: `${values.given_name} ${values.family_name}`,
+          totalPrice: totalPrice,
+          totalDuration: totalDuration,
         })
       );
 
@@ -302,8 +331,12 @@ export function SimpleAppointment() {
   };
 
   const formatPrice = (amount: number) => `$${(amount / 100).toFixed(2)}`;
+  const formatDuration = (duration: number) => {
+    const mins = duration > 10000 ? Math.round(duration / 60000) : duration;
+    return `${mins} min`;
+  };
 
-  if (!selectedService) {
+  if (selectedServices.length === 0) {
     return (
       <div className="min-h-screen bg-[#010401] flex items-center justify-center">
         <div className="w-12 h-12 border-4 border-white border-t-transparent rounded-full animate-spin" />
@@ -424,10 +457,30 @@ export function SimpleAppointment() {
               <div className="bg-[#0a0a0a] rounded-xl p-4 border border-white/30">
                 <h3 className="font-semibold mb-4">Appointment Summary</h3>
                 <div className="space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span>{selectedService.name}</span>
-                    <span>{formatPrice(selectedService.price_amount)}</span>
-                  </div>
+                  {/* Services List */}
+                  {selectedServices.map((service, index) => (
+                    <div key={service.id} className="flex justify-between items-start">
+                      <div className="flex-1 pr-2">
+                        <span className="text-white">{service.name}</span>
+                        <span className="text-gray-500 text-xs ml-2">
+                          ({formatDuration(service.duration)})
+                        </span>
+                      </div>
+                      <span className="text-white whitespace-nowrap">
+                        {formatPrice(service.price_amount)}
+                      </span>
+                    </div>
+                  ))}
+
+                  {/* Multiple services indicator */}
+                  {selectedServices.length > 1 && (
+                    <div className="pt-2 border-t border-white/20 flex justify-between text-gray-400">
+                      <span>Total Duration</span>
+                      <span>{totalDuration} min</span>
+                    </div>
+                  )}
+
+                  {/* Date & Time */}
                   {selectedTime && (
                     <div className="pt-2 border-t border-white/20">
                       <p className="text-white">
@@ -442,9 +495,11 @@ export function SimpleAppointment() {
                       </p>
                     </div>
                   )}
+
+                  {/* Total */}
                   <div className="pt-2 border-t border-white/20 flex justify-between font-semibold">
                     <span>Due at appointment</span>
-                    <span>{formatPrice(selectedService.price_amount)}</span>
+                    <span>{formatPrice(totalPrice)}</span>
                   </div>
                 </div>
               </div>
