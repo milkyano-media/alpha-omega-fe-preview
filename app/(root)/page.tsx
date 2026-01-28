@@ -27,7 +27,9 @@ export default function Home() {
   return (
     <main className="flex flex-col gap-20">
         {/* GALLERY SHOWCASE SECTION */}
-        <GalleryShowcase onBookNow={handleBookNow} />
+        <div className="mt-9">
+          <GalleryShowcase onBookNow={handleBookNow} />
+        </div>
       
 
       <section className="flex flex-col gap-8 justify-center items-center px-4 container mx-auto">

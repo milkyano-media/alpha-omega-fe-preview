@@ -7,6 +7,7 @@ import {
   TeamMember,
   Service,
 } from "@/lib/booking-service";
+import { categorizeServices } from "@/lib/service-utils";
 import { useBookingCart } from "@/lib/booking-cart-context";
 import { BarberCard } from "./BarberCard";
 import { ServiceItem } from "./ServiceItem";
@@ -258,16 +259,32 @@ export function BookingSelector() {
                         )}
                       </Button>
 
-                      {/* Mobile: 2-Column Grid - Always Visible */}
-                      <div className="md:hidden w-[85%] mx-auto grid grid-cols-2 gap-3 mt-4">
-                        {item.services.map((service) => (
-                          <ServiceItem
-                            key={service.id}
-                            service={service}
-                            onBook={(s) => handleServiceClick(s, item.barber)}
-                            variant="mobile"
-                            isSelected={isServiceSelected(service.id)}
-                          />
+                      {/* Mobile: Grouped Services with Separators */}
+                      <div className="md:hidden w-[85%] mx-auto mt-4 space-y-4">
+                        {categorizeServices(item.services).map((group, groupIndex) => (
+                          <div key={group.category}>
+                            {/* Category Header with Lines */}
+                            <div className="flex items-center gap-3 mb-3">
+                              <div className="flex-1 h-px bg-white/30" />
+                              <span className="text-white/70 text-xs font-medium uppercase tracking-wider">
+                                {group.category}
+                              </span>
+                              <div className="flex-1 h-px bg-white/30" />
+                            </div>
+
+                            {/* Services Grid */}
+                            <div className="grid grid-cols-2 gap-3">
+                              {group.services.map((service) => (
+                                <ServiceItem
+                                  key={service.id}
+                                  service={service}
+                                  onBook={(s) => handleServiceClick(s, item.barber)}
+                                  variant="mobile"
+                                  isSelected={isServiceSelected(service.id)}
+                                />
+                              ))}
+                            </div>
+                          </div>
                         ))}
                       </div>
 

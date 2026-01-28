@@ -60,7 +60,7 @@ export function SimpleAppointment() {
 
   // Service data from localStorage - now supports multiple services
   const [selectedServices, setSelectedServices] = useState<Service[]>([]);
-  // const [barberId, setBarberId] = useState<string | null>(null);
+  const [barberSquareId, setBarberSquareId] = useState<string | null>(null);
 
   // Calendar states
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
@@ -102,7 +102,7 @@ export function SimpleAppointment() {
   // Load service data from localStorage
   useEffect(() => {
     const servicesData = localStorage.getItem("selectedServices");
-    // const barberIdData = localStorage.getItem("selectedBarberId");
+    const barberSquareIdData = localStorage.getItem("selectedBarberSquareId");
 
     if (!servicesData) {
       router.push("/book");
@@ -116,7 +116,7 @@ export function SimpleAppointment() {
         return;
       }
       setSelectedServices(services);
-      // setBarberId(barberIdData);
+      setBarberSquareId(barberSquareIdData);
     } catch {
       router.push("/book");
     }
@@ -134,14 +134,27 @@ export function SimpleAppointment() {
         const endDate = new Date();
         endDate.setDate(today.getDate() + 60);
 
+        // Build request body with optional team member filter
+        const requestBody: {
+          service_variation_id: string;
+          start_at: string;
+          end_at: string;
+          team_member_id?: string;
+        } = {
+          service_variation_id: primaryService.service_variation_id,
+          start_at: today.toISOString(),
+          end_at: endDate.toISOString(),
+        };
+
+        // Add team member filter if barber is selected
+        if (barberSquareId) {
+          requestBody.team_member_id = barberSquareId;
+        }
+
         const response = await fetch("/api/search-availability", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            service_variation_id: primaryService.service_variation_id,
-            start_at: today.toISOString(),
-            end_at: endDate.toISOString(),
-          }),
+          body: JSON.stringify(requestBody),
         });
 
         if (!response.ok) {
@@ -180,7 +193,7 @@ export function SimpleAppointment() {
     };
 
     fetchAvailability();
-  }, [primaryService]);
+  }, [primaryService, barberSquareId]);
 
   const updateTimesForDate = (date: Date, availabilities: TimeSlot[]) => {
     const dateKey = dayjs(date).tz("Australia/Melbourne").format("YYYY-MM-DD");

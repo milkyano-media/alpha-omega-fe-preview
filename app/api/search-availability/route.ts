@@ -15,7 +15,7 @@ const MAX_DAYS_PER_REQUEST = 31;
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { service_variation_id, start_at, end_at } = body;
+    const { service_variation_id, start_at, end_at, team_member_id } = body;
 
     if (!service_variation_id || !start_at || !end_at) {
       return NextResponse.json(
@@ -50,7 +50,8 @@ export async function POST(request: NextRequest) {
           service_variation_id,
           currentStart.toISOString(),
           batchEnd.toISOString(),
-          locationId
+          locationId,
+          team_member_id
         );
 
         // Merge results
@@ -70,7 +71,8 @@ export async function POST(request: NextRequest) {
         service_variation_id,
         start_at,
         end_at,
-        locationId
+        locationId,
+        team_member_id
       );
       Object.assign(availabilitiesByDate, result);
     }
@@ -103,8 +105,24 @@ async function fetchAvailabilityBatch(
   serviceVariationId: string,
   startAt: string,
   endAt: string,
-  locationId: string
+  locationId: string,
+  teamMemberId?: string
 ): Promise<Record<string, any[]>> {
+  // Build segment filter with optional team member filter
+  const segmentFilter: {
+    serviceVariationId: string;
+    teamMemberIdFilter?: { any: string[] };
+  } = {
+    serviceVariationId: serviceVariationId,
+  };
+
+  // Add team member filter if provided
+  if (teamMemberId) {
+    segmentFilter.teamMemberIdFilter = {
+      any: [teamMemberId],
+    };
+  }
+
   const response = await square.bookingsApi.searchAvailability({
     query: {
       filter: {
@@ -113,11 +131,7 @@ async function fetchAvailabilityBatch(
           endAt: endAt,
         },
         locationId,
-        segmentFilters: [
-          {
-            serviceVariationId: serviceVariationId,
-          },
-        ],
+        segmentFilters: [segmentFilter],
       },
     },
   });
