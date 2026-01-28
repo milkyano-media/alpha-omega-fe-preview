@@ -30,7 +30,7 @@ interface BarberWithServices {
 }
 
 export function BookingSelector() {
-  const { addItem, removeItem, isServiceSelected, selectedBarber, clearCart } =
+  const { addItem, removeItem, isServiceSelected, selectedBarber, clearCart, items } =
     useBookingCart();
   const [barberServices, setBarberServices] = useState<BarberWithServices[]>(
     [],
@@ -185,7 +185,7 @@ export function BookingSelector() {
         </Link>
       </div>
 
-      <div className="max-w-5xl mx-auto px-4 pt-32 pb-8 md:pt-40 md:pb-12">
+      <div className={`max-w-5xl mx-auto px-4 pt-32 md:pt-40 md:pb-12 ${items.length > 0 ? 'pb-32' : 'pb-8'}`}>
         {isLoading ? (
           <div className="flex flex-col items-center justify-center gap-6 min-h-[calc(100vh-12rem)] md:min-h-[calc(100vh-8rem)] md:pt-16">
             <h3 className="text-xl font-bold text-white">Loading barbers...</h3>
