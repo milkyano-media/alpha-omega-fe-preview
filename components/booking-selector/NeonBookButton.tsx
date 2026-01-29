@@ -13,7 +13,7 @@ interface NeonBookButtonProps {
 export function NeonBookButton({
   onClick,
   className = "",
-  children = "BOOK NOW",
+  children = "BOOK",
   disabled = false,
   isSelected = false,
 }: NeonBookButtonProps) {

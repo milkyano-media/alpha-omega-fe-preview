@@ -47,7 +47,7 @@ export function ServiceItem({
           className="w-full h-10 text-xs !px-2 !py-2"
           isSelected={isSelected}
         >
-          {isSelected ? <Check className="w-4 h-4" /> : "BOOK NOW"}
+          {isSelected ? <Check className="w-4 h-4" /> : "BOOK"}
         </NeonBookButton>
       </div>
     );
@@ -72,7 +72,7 @@ export function ServiceItem({
           className="w-full md:w-52 md:h-14 md:flex-shrink-0 whitespace-nowrap"
           isSelected={isSelected}
         >
-          {isSelected ? <Check className="w-6 h-6" /> : "BOOK NOW"}
+          {isSelected ? <Check className="w-6 h-6" /> : "BOOK"}
         </NeonBookButton>
       </div>
     </div>

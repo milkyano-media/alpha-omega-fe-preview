@@ -12,7 +12,7 @@ interface BarberCardProps {
 
 // Map barber names to their image paths
 const barberImages: Record<string, string> = {
-  CHRISTOS: "/assets/booking-list/christos.jpg",
+  CHRISTOS: "/assets/booking-list/christos.png",
 };
 
 function getBarberImage(firstName: string): string | null {

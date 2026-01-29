@@ -9,8 +9,8 @@ const galleryBarbers = [
   {
     name: "CHRISTOS",
     badge: "Barber",
-    image: "/assets/barbers/christos.jpg",
-    thumbnail: "/assets/barbers-gallery/christos.jpg",
+    image: "/assets/barbers/christos.png",
+    thumbnail: "/assets/barbers-gallery/christos.png",
     description:
       "Barber since 2018, bringing creativity and precision from Greece to Australia. Founder of Alpha Omega — where authenticity meets luxury.",
   },
